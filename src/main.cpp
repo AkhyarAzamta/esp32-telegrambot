@@ -33,14 +33,11 @@ void handleNewMessages(int numNewMessages) {
   for (int i = 0; i < numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);
     if (chat_id != CHAT_ID) {
-      bot.sendMessage(chat_id, "Unauthorized user", "");
+      bot.sendMessage(chat_id, "Sorry bos! khusus @akhyar_azamta", "");
       continue;
     }
     String text = bot.messages[i].text;
     Serial.println(text);
-
-    String from_name = bot.messages[i].from_name;
-
     for (int i = 0; i < (count - 1); i++) {
       if (text == controls[i]) {
         String message = controls[i] + " " + String(Statusled[i] ? "OFF" : "ON");
@@ -49,17 +46,20 @@ void handleNewMessages(int numNewMessages) {
         digitalWrite(Pinled[i], Statusled[i]);
       }
     }
+
+    String from_name = bot.messages[i].from_name;
+
     if (text == "/start") {
       String control = "Selamat Datang, " + from_name + ".\n";
-      control += "Gunakan Commands Di Bawah Untuk Control Lednya.\n\n";
+      control += "Gunakan Commands Di Bawah Untuk Control Relaynya.\n\n";
       control += "/Relay_1 Untuk ON/OFF Relay 1 \n";
       control += "/Relay_2 Untuk ON/OFF Relay 2 \n";
       control += "/Status Untuk Cek Status semua Relay Saat Ini \n";
-      control += "/Tombol";
+      control += "/Tombol Untuk Menampilkan tombol";
       bot.sendMessage(chat_id, control, "");
     }
 
-    if (text == F("/Tombol")) {
+    else if (text == F("/Tombol")) {
       String control = "[";
       for (int i = 0; i < count; i++) {
         control += F("[{ \"text\" : \"");
@@ -80,7 +80,7 @@ void handleNewMessages(int numNewMessages) {
     //                control += F("[{ \"text\" : \"Cek Status Relay\", \"callback_data\" : \"/Status\" }]]");
     //                bot.sendMessageWithInlineKeyboard(chat_id, "\nKontrol Relay", "", control);
     //                }
-    if (text == "/Status") {
+    else if (text == "/Status") {
       String message = "";
       for (int i = 0; i < (count - 1); i++) {
         message += controls[i] + " " + String(Statusled[i] ? "ON" : "OFF") + "\n";
@@ -93,8 +93,11 @@ void handleNewMessages(int numNewMessages) {
     //   bot.sendMessage(chat_id, message.c_str(), "");
     // }
 
-    if (text == "/ALL_OFF") {
+    else if (text == "/ALL_OFF") {
       Serial.println("Semuanya Off");
+    }
+    else{
+      bot.sendMessage(chat_id, "Commands tidak sesuai!/nGunakan /start untuk memulai", "");
     }
   }
 }
