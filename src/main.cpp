@@ -1,150 +1,100 @@
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <UniversalTelegramBot.h>
-#include <ArduinoJson.h>
+#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <EEPROM.h>
+#include <UniversalTelegramBot.h>
+#include <WiFiClientSecure.h>
 
-const char* ssid = "Hotspot";
-const char* password = "12345678";
+#define EEPROM_SIZE 512 // Ukuran EEPROM
+#define SSID_LENGTH 32   // Maksimal panjang SSID WiFi
+#define PASS_LENGTH 64   // Maksimal panjang password WiFi
 
-// inisialisasi Bot Token
-#define BOTtoken "5516395910:AAELB0hR25UA6KEVACzyaLyLBtBcduG5qjI"  // Bot Token dari BotFather
-
-// chat id dari @myidbot
-#define CHAT_ID "1994541524"
-
+String botToken;
+String chatID;
 WiFiClientSecure client;
-UniversalTelegramBot bot(BOTtoken, client);
-
-int botRequestDelay = 100;
-unsigned long lastTimeBotRan;
-
-int ON = HIGH, OFF = LOW;
-
-const int Pinled[] = { 2, 4, 5, 18, 19 };
-bool Statusled[] = { OFF, OFF, OFF, OFF, OFF };
-String controls[] = { "/Relay_1", "/Relay_2", "/Relay_3", "/Relay_4", "/Relay_5", "/ALL_OFF" };
-int count = sizeof(controls) / sizeof(controls[0]);
-
-void handleNewMessages(int numNewMessages) {
-  Serial.println("handleNewMessages");
-  Serial.println(String(numNewMessages));
-
-  for (int i = 0; i < numNewMessages; i++) {
-    String chat_id = String(bot.messages[i].chat_id);
-    if (chat_id != CHAT_ID) {
-      bot.sendMessage(chat_id, "Sorry bos! khusus @akhyar_azamta", "");
-      continue;
-    }
-    String text = bot.messages[i].text;
-    Serial.println(text);
-    for (int i = 0; i < (count - 1); i++) {
-      if (text == controls[i]) {
-        String message = controls[i] + " " + String(Statusled[i] ? "OFF" : "ON");
-        bot.sendMessage(chat_id, message.c_str(), "");
-        Statusled[i] = !Statusled[i];
-        digitalWrite(Pinled[i], Statusled[i]);
-      }
-    }
-
-    String from_name = bot.messages[i].from_name;
-
-    if (text == "/start") {
-      String control = "Selamat Datang, " + from_name + ".\n";
-      control += "Gunakan Commands Di Bawah Untuk Control Relaynya.\n\n";
-      control += "/Relay_1 Untuk ON/OFF Relay 1 \n";
-      control += "/Relay_2 Untuk ON/OFF Relay 2 \n";
-      control += "/Status Untuk Cek Status semua Relay Saat Ini \n";
-      control += "/Tombol Untuk Menampilkan tombol";
-      bot.sendMessage(chat_id, control, "");
-    }
-
-    else if (text == F("/Tombol")) {
-      String control = "[";
-      for (int i = 0; i < count; i++) {
-        control += F("[{ \"text\" : \"");
-        control += controls[i].substring(1);  //mengambil callback data setelah karakter slash (/)
-        control += F("\", \"callback_data\" : \"");
-        control += controls[i];
-        control += F("\" }");
-        if (i < sizeof(controls) / sizeof(controls[0]) - 1) {
-          control += F("],");
-        }
-      }
-      control += F(",{ \"text\" : \"Cek Status Relay\", \"callback_data\" : \"/Status\" }]]");
-      bot.sendMessageWithInlineKeyboard(chat_id, "\nKontrol Perangkat", "", control);
-    }
-    // if (text == F("/Tombol")) {
-    //         String control  = F("[[{ \"text\" : \"Relay 1\", \"callback_data\" : \"/Relay_1\" }],");
-    //                control += F("[{ \"text\" : \"Relay 2\", \"callback_data\" : \"/Relay_2\" }],");
-    //                control += F("[{ \"text\" : \"Cek Status Relay\", \"callback_data\" : \"/Status\" }]]");
-    //                bot.sendMessageWithInlineKeyboard(chat_id, "\nKontrol Relay", "", control);
-    //                }
-    else if (text == "/Status") {
-      String message = "";
-      for (int i = 0; i < (count - 1); i++) {
-        message += controls[i] + " " + String(Statusled[i] ? "ON" : "OFF") + "\n";
-      }
-      bot.sendMessage(chat_id, message.c_str(), "");
-    }
-    // if (text == "/Status") {
-    //   String message = " Relay 1 " + String(Statusled[0] ? "ON" : "OFF");
-    //   message += "\nRelay 2 " + String(Statusled[1] ? "ON" : "OFF");
-    //   bot.sendMessage(chat_id, message.c_str(), "");
-    // }
-
-    else if (text == "/ALL_OFF") {
-      Serial.println("Semuanya Off");
-    }
-    else{
-      bot.sendMessage(chat_id, "Commands tidak sesuai!/nGunakan /start untuk memulai", "");
-    }
-  }
-}
+UniversalTelegramBot bot(botToken, client);
 
 void setup() {
   Serial.begin(115200);
-  for (int i = 0; i < count; i++) {
-    pinMode(Pinled[i], OUTPUT);
-    digitalWrite(Pinled[i], Statusled[i]);
+
+  // Inisialisasi EEPROM
+  EEPROM.begin(EEPROM_SIZE);
+
+  // Baca SSID dan password dari EEPROM
+  String ssid = EEPROM.readString(0);
+  String password = EEPROM.readString(SSID_LENGTH + 1);
+  botToken = EEPROM.readString(SSID_LENGTH + PASS_LENGTH + 2);
+  chatID = EEPROM.readString(SSID_LENGTH + PASS_LENGTH + 2 + botToken.length() + 1);
+
+  // Deklarasi objek WiFiManager
+  WiFiManager wifiManager;
+
+  // Buat parameter untuk bot token dan chat ID
+  WiFiManagerParameter custom_botToken("botToken", "Bot Token", botToken.c_str(), 64);
+  WiFiManagerParameter custom_chatID("chatID", "Chat ID", chatID.c_str(), 64);
+
+  // Tambahkan parameter ke WiFiManager
+  wifiManager.addParameter(&custom_botToken);
+  wifiManager.addParameter(&custom_chatID);
+
+  // Jika SSID dan password tidak kosong, coba terhubung ke WiFi
+  if (ssid.length() > 0 && password.length() > 0) {
+    Serial.println("Mencoba terhubung ke WiFi: " + ssid);
+WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid.c_str(), password.c_str());
+  // Coba terhubung ke jaringan WiFi yang pernah digunakan
+  if (!wifiManager.autoConnect()) {
+    Serial.println("Gagal terhubung ke WiFi. Keluar dari program.");
+    while (true) {}
   }
-  // Koneksi Ke Wifi
-  WiFi.mode(WIFI_STA);
-  WiFi.scanNetworks();
-  WiFi.begin(ssid, password);
-#ifdef ESP32
-  client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
-#endif
-  static unsigned long lastCheck = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - lastCheck > 5000) {
-      lastCheck = millis();
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(ssid, password);
+    // Tunggu hingga terhubung atau timeout
+    unsigned long startTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000) {
+      delay(100);
     }
-    Serial.println("Koneksi WiFi terputus!");
+
+    // Jika berhasil terhubung, tampilkan informasi WiFi dan keluar dari program setup()
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Terhubung ke WiFi. SSID: " + ssid + ", Password: " + password);
+      return;
+    }
   }
-  Serial.println("Wifi Terhubung.....");
+
+  // Jika tidak berhasil terhubung ke jaringan WiFi, masuk ke mode konfigurasi WiFi
+  Serial.println("Gagal terhubung ke WiFi. Masuk ke mode konfigurasi.");
+
+  // // Coba terhubung ke jaringan WiFi yang pernah digunakan
+  // if (!wifiManager.autoConnect()) {
+  //   Serial.println("Gagal terhubung ke WiFi. Keluar dari program.");
+  //   while (true) {}
+  // }
+
+  // Ambil nilai dari parameter botToken dan chatID
+  botToken = custom_botToken.getValue();
+  chatID = custom_chatID.getValue();
+
+  // Simpan SSID, password, botToken, dan chatID ke EEPROM
+  EEPROM.writeString(0, WiFi.SSID());
+  EEPROM.writeString(SSID_LENGTH + 1, WiFi.psk());
+  EEPROM.writeString(SSID_LENGTH + PASS_LENGTH + 2, botToken);
+  EEPROM.writeString(SSID_LENGTH + PASS_LENGTH + 2 + botToken.length() + 1, chatID);
+  EEPROM.commit();
+  EEPROM.end();
+
+  Serial.println("Terhubung ke WiFi. SSID: " + WiFi.SSID() + ", Password: " + WiFi.psk());
 }
 
 void loop() {
-  if (millis() > lastTimeBotRan + botRequestDelay) {
-    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+  // Baca SSID dan password dari EEPROM
+  String ssid = EEPROM.readString(0);
+  String password = EEPROM.readString(SSID_LENGTH + 1);
+String stored_botToken = EEPROM.readString(SSID_LENGTH + PASS_LENGTH + 2);
+String stored_chatID = EEPROM.readString(SSID_LENGTH + PASS_LENGTH + 2 + stored_botToken.length() + 1);
 
-    while (numNewMessages) {
-      Serial.println("got response");
-      handleNewMessages(numNewMessages);
-      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-    }
-    lastTimeBotRan = millis();
-  }
-  static unsigned long lastCheck = 0;
-  if (millis() - lastCheck > 5000) {
-    lastCheck = millis();
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("Koneksi WiFi terputussssss!");
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(ssid, password);
-    }
-  }
+Serial.println("Bot Token: " + stored_botToken);
+Serial.println("Chat ID: " + stored_chatID);
+
+  // Tampilkan SSID dan password di Serial Monitor
+  Serial.println("SSID: " + ssid + ", Password: " + password);
+
+  delay(3000);
 }
+
