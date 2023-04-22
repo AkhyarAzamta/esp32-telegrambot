@@ -21,8 +21,18 @@ int ON = HIGH, OFF = LOW;
 
 const int Pinled[] = {2, 4, 5, 18, 19};
 bool Statusled[] = {OFF, OFF, OFF, OFF, OFF};
-String controls[] = {"/Relay_1", "/Relay_2", "/Relay_3", "/Relay_4", "/Relay_5", "/ALL_OFF"};
+String controls[] = {"/relay1", "/relay2", "/relay3", "/relay4", "/relay5", "/status", "/reset"};
 int count = sizeof(controls) / sizeof(controls[0]);
+
+void resetSettings()
+{
+  // membuat objek WiFiManager
+  WiFiManager wifiManager;
+  
+  // reset konfigurasi dan memulai mode konfigurasi
+  wifiManager.resetSettings();
+  wifiManager.startConfigPortal();
+}
 
 void handleNewMessages(int numNewMessages)
 {
@@ -34,7 +44,7 @@ void handleNewMessages(int numNewMessages)
     String chat_id = String(bot.messages[i].chat_id);
     if (chat_id != chatID)
     {
-      bot.sendMessage(chat_id, "Unauthorized user", "");
+      bot.sendMessage(chat_id, "Sorry gaes khusus @akhyar_azamta", "");
       continue;
     }
     String text = bot.messages[i].text;
@@ -56,14 +66,27 @@ void handleNewMessages(int numNewMessages)
     {
       String control = "Selamat Datang, " + from_name + ".\n";
       control += "Gunakan Commands Di Bawah Untuk Control Lednya.\n\n";
-      control += "/Relay_1 Untuk ON/OFF Relay 1 \n";
-      control += "/Relay_2 Untuk ON/OFF Relay 2 \n";
-      control += "/Status Untuk Cek Status semua Relay Saat Ini \n";
-      control += "/Tombol";
+
+      for (int i = 0; i < count; i++)
+      {
+        if (controls[i] == "/status")
+        {
+          control += "/status Untuk Cek Status semua Relay Saat Ini \n";
+        }
+        else if (controls[i] == "/reset")
+        {
+          control += "/reset Untuk Mematikan semua Relay \n";
+        }
+        else
+        {
+          control += controls[i] + " Untuk ON/OFF Relay " + String(i + 1) + " \n";
+        }
+      }
+      control += "/button Untuk Menampilkan Tombol";
       bot.sendMessage(chat_id, control, "");
     }
 
-    else if (text == F("/Tombol"))
+    else if (text == F("/button"))
     {
       String control = "[";
       for (int i = 0; i < count; i++)
@@ -78,10 +101,11 @@ void handleNewMessages(int numNewMessages)
           control += F("],");
         }
       }
-      control += F(",{ \"text\" : \"Cek Status Relay\", \"callback_data\" : \"/Status\" }]]");
+      control += F("]]");
+      // control += F(",{ \"text\" : \"Cek Status Relay\", \"callback_data\" : \"/Status\" }]]");
       bot.sendMessageWithInlineKeyboard(chat_id, "\nKontrol Perangkat", "", control);
     }
-    else if (text == "/Status")
+    else if (text == "/status")
     {
       String message = "";
       for (int i = 0; i < (count - 1); i++)
@@ -90,15 +114,20 @@ void handleNewMessages(int numNewMessages)
       }
       bot.sendMessage(chat_id, message.c_str(), "");
     }
-    else if (text == "/ALL_OFF")
+    else if (text == "/reset")
     {
-      Serial.println("Semuanya Off");
+        
+
+      // Print message
+      Serial.println("EEPROM cleared.");
+      bot.sendMessage(chat_id, "EEPROM cleared.", "");
+      resetSettings();
     }
     else
     {
       if (text != controls[i])
       {
-      bot.sendMessage(chat_id, "Perintah tidak dikenali, Ketik /start untuk list perintah.", "");
+        bot.sendMessage(chat_id, "Perintah tidak dikenali, Ketik /start untuk list perintah.", "");
       }
     }
   }
@@ -158,8 +187,6 @@ void setup()
       delay(100);
     }
   }
-
-  // Jika tidak berhasil terhubung ke jaringan WiFi, masuk ke mode konfigurasi WiFi
 
   // Ambil nilai dari parameter botToken dan chatID
   botToken = custom_botToken.getValue();
