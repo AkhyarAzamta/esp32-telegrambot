@@ -21,7 +21,7 @@ unsigned long lastTimeBotRan;
 
 int ON = HIGH, OFF = LOW;
 
-const int Pinled[] = { 2, 4, 5, 18, 19 };
+const int Pinled[] = { 12, 13, 14, 15, 18};
 bool Statusled[] = { OFF, OFF, OFF, OFF, OFF };
 String controls[] = { "/Relay_1", "/Relay_2", "/Relay_3", "/Relay_4", "/Relay_5", "/ALL_OFF" };
 int count = sizeof(controls) / sizeof(controls[0]);
