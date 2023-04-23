@@ -19,6 +19,9 @@ unsigned long lastTimeBotRan;
 
 int ON = HIGH, OFF = LOW;
 
+const int BUTTON_PIN = 13;
+int buttonState = 0;
+
 const int Pinled[] = {2, 4, 5, 18, 19};
 bool Statusled[] = {OFF, OFF, OFF, OFF, OFF};
 String controls[] = {"/relay1", "/relay2", "/relay3", "/relay4", "/relay5", "/status", "/reset"};
@@ -33,18 +36,20 @@ void S_resetSettings()
   WiFi.disconnect();
 
   // Menghapus data SSID dan password dari memori EEPROM
-  for (int i = 0; i < SSID_LENGTH; i++) {
+  for (int i = 0; i < SSID_LENGTH; i++)
+  {
     EEPROM.write(i, 0);
     EEPROM.write(i, 1);
     EEPROM.write(i, 2);
   }
-  for (int i = SSID_LENGTH; i < SSID_LENGTH + PASS_LENGTH; i++) {
+  for (int i = SSID_LENGTH; i < SSID_LENGTH + PASS_LENGTH; i++)
+  {
     EEPROM.write(i, 0);
     EEPROM.write(i, 1);
     EEPROM.write(i, 2);
   }
   EEPROM.commit();
-   // Buat parameter untuk bot token dan chat ID
+  // Buat parameter untuk bot token dan chat ID
   WiFiManagerParameter custom_botToken("botToken", "Bot Token", botToken.c_str(), 64);
   WiFiManagerParameter custom_chatID("chatID", "Chat ID", chatID.c_str(), 64);
 
@@ -56,7 +61,7 @@ void S_resetSettings()
   // Ambil nilai dari parameter botToken dan chatID
   botToken = custom_botToken.getValue();
   chatID = custom_chatID.getValue();
-    // Simpan SSID, password, botToken, dan chatID ke EEPROM
+  // Simpan SSID, password, botToken, dan chatID ke EEPROM
   EEPROM.writeString(0, WiFi.SSID());
   EEPROM.writeString(SSID_LENGTH + 1, WiFi.psk());
   EEPROM.writeString(SSID_LENGTH + PASS_LENGTH + 2, botToken);
@@ -67,7 +72,6 @@ void S_resetSettings()
   bot.updateToken(botToken);
   Serial.println("Terhubung ke WiFi. SSID: " + WiFi.SSID() + ", Password: " + WiFi.psk());
 }
-
 
 void handleNewMessages(int numNewMessages)
 {
@@ -149,7 +153,7 @@ void handleNewMessages(int numNewMessages)
       }
       bot.sendMessage(chat_id, message.c_str(), "");
     }
-    else if (text == "/reset" )
+    else if (text == "/reset")
     {
       bot.sendMessage(chat_id, "Sambungkan ke wifi 'ESP32-SmartHome'", "");
       S_resetSettings();
@@ -167,6 +171,7 @@ void handleNewMessages(int numNewMessages)
 void setup()
 {
   Serial.begin(115200);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   for (int i = 0; i < count; i++)
   {
@@ -189,14 +194,14 @@ void setup()
   // Deklarasi objek WiFiManager
   WiFiManager wifiManager;
 
- // Buat parameter untuk bot token dan chat ID
+  // Buat parameter untuk bot token dan chat ID
   WiFiManagerParameter custom_botToken("botToken", "Bot Token", botToken.c_str(), 64);
   WiFiManagerParameter custom_chatID("chatID", "Chat ID", chatID.c_str(), 64);
 
   // Tambahkan parameter ke WiFiManager
   wifiManager.addParameter(&custom_botToken);
   wifiManager.addParameter(&custom_chatID);
-// wifiManager.autoConnect("ESP32-SmartHome", "password");
+  // wifiManager.autoConnect("ESP32-SmartHome", "password");
   // Jika SSID dan password tidak kosong, coba terhubung ke WiFi
   if (ssid.length() > 0 && password.length() > 0)
   {
@@ -237,6 +242,16 @@ void setup()
 
 void loop()
 {
+  // Membaca nilai input dari tombol
+ buttonState = digitalRead(BUTTON_PIN);
+  // Jika tombol ditekan, LED akan menyala
+  if (buttonState == LOW)
+  {
+    Statusled[0] = !Statusled[0];
+    digitalWrite(Pinled[0], Statusled[0]);
+    delay(100);
+  }
+
   if (millis() > lastTimeBotRan + botRequestDelay)
   {
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
@@ -263,6 +278,13 @@ void loop()
       Serial.println("Koneksi WiFi Tersambung!");
     }
   }
+
+  // else
+  // {
+  //   Statusled[0] = !Statusled[0];
+  //   digitalWrite(Pinled[0], Statusled[0]);
+  // }
+
   // Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
   // delay(3000);
 }
