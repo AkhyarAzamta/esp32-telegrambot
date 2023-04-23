@@ -151,11 +151,6 @@ void handleNewMessages(int numNewMessages)
     }
     else if (text == "/reset" )
     {
-        
-
-      // Print message
-      // Serial.println("EEPROM cleared.");
-      // numNewMessages = 0;
       bot.sendMessage(chat_id, "Sambungkan ke wifi 'ESP32-SmartHome'", "");
       S_resetSettings();
     }
@@ -268,26 +263,6 @@ void loop()
       Serial.println("Koneksi WiFi Tersambung!");
     }
   }
-  Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
-  delay(3000);
+  // Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
+  // delay(3000);
 }
-// void S_resetSettings()
-// {
-//   // Membuat objek WiFiManager
-//   WiFiManager wifiManager;
-
-//   // Memutuskan koneksi Wi-Fi yang aktif
-//   WiFi.disconnect();
-
-//   // Menghapus data SSID dan password dari memori EEPROM
-//   for (int i = 0; i < SSID_LENGTH; i++) {
-//     EEPROM.write(i, 0);
-//   }
-//   for (int i = SSID_LENGTH; i < SSID_LENGTH + PASS_LENGTH; i++) {
-//     EEPROM.write(i, 0);
-//   }
-//   EEPROM.commit();
-
-//   // Menjalankan mode konfigurasi Wi-Fi
-//   wifiManager.startConfigPortal();
-// }
