@@ -24,15 +24,50 @@ bool Statusled[] = {OFF, OFF, OFF, OFF, OFF};
 String controls[] = {"/relay1", "/relay2", "/relay3", "/relay4", "/relay5", "/status", "/reset"};
 int count = sizeof(controls) / sizeof(controls[0]);
 
-void resetSettings()
+void S_resetSettings()
 {
-  // membuat objek WiFiManager
+  // Membuat objek WiFiManager
   WiFiManager wifiManager;
-  
-  // reset konfigurasi dan memulai mode konfigurasi
-  wifiManager.resetSettings();
+
+  // Memutuskan koneksi Wi-Fi yang aktif
+  WiFi.disconnect();
+
+  // Menghapus data SSID dan password dari memori EEPROM
+  for (int i = 0; i < SSID_LENGTH; i++) {
+    EEPROM.write(i, 0);
+    EEPROM.write(i, 1);
+    EEPROM.write(i, 2);
+  }
+  for (int i = SSID_LENGTH; i < SSID_LENGTH + PASS_LENGTH; i++) {
+    EEPROM.write(i, 0);
+    EEPROM.write(i, 1);
+    EEPROM.write(i, 2);
+  }
+  EEPROM.commit();
+   // Buat parameter untuk bot token dan chat ID
+  WiFiManagerParameter custom_botToken("botToken", "Bot Token", botToken.c_str(), 64);
+  WiFiManagerParameter custom_chatID("chatID", "Chat ID", chatID.c_str(), 64);
+
+  // Tambahkan parameter ke WiFiManager
+  wifiManager.addParameter(&custom_botToken);
+  wifiManager.addParameter(&custom_chatID);
+  // // Menjalankan mode konfigurasi Wi-Fi
   wifiManager.startConfigPortal();
+  // Ambil nilai dari parameter botToken dan chatID
+  botToken = custom_botToken.getValue();
+  chatID = custom_chatID.getValue();
+    // Simpan SSID, password, botToken, dan chatID ke EEPROM
+  EEPROM.writeString(0, WiFi.SSID());
+  EEPROM.writeString(SSID_LENGTH + 1, WiFi.psk());
+  EEPROM.writeString(SSID_LENGTH + PASS_LENGTH + 2, botToken);
+  EEPROM.writeString(SSID_LENGTH + PASS_LENGTH + 2 + botToken.length() + 1, chatID);
+  EEPROM.commit();
+  EEPROM.end();
+  client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
+  bot.updateToken(botToken);
+  Serial.println("Terhubung ke WiFi. SSID: " + WiFi.SSID() + ", Password: " + WiFi.psk());
 }
+
 
 void handleNewMessages(int numNewMessages)
 {
@@ -75,7 +110,7 @@ void handleNewMessages(int numNewMessages)
         }
         else if (controls[i] == "/reset")
         {
-          control += "/reset Untuk Mematikan semua Relay \n";
+          control += "/reset Untuk Konfigurasi Ulang\n";
         }
         else
         {
@@ -114,14 +149,15 @@ void handleNewMessages(int numNewMessages)
       }
       bot.sendMessage(chat_id, message.c_str(), "");
     }
-    else if (text == "/reset")
+    else if (text == "/reset" )
     {
         
 
       // Print message
-      Serial.println("EEPROM cleared.");
-      bot.sendMessage(chat_id, "EEPROM cleared.", "");
-      resetSettings();
+      // Serial.println("EEPROM cleared.");
+      // numNewMessages = 0;
+      bot.sendMessage(chat_id, "Sambungkan ke wifi 'ESP32-SmartHome'", "");
+      S_resetSettings();
     }
     else
     {
@@ -158,14 +194,14 @@ void setup()
   // Deklarasi objek WiFiManager
   WiFiManager wifiManager;
 
-  // Buat parameter untuk bot token dan chat ID
+ // Buat parameter untuk bot token dan chat ID
   WiFiManagerParameter custom_botToken("botToken", "Bot Token", botToken.c_str(), 64);
   WiFiManagerParameter custom_chatID("chatID", "Chat ID", chatID.c_str(), 64);
 
   // Tambahkan parameter ke WiFiManager
   wifiManager.addParameter(&custom_botToken);
   wifiManager.addParameter(&custom_chatID);
-
+// wifiManager.autoConnect("ESP32-SmartHome", "password");
   // Jika SSID dan password tidak kosong, coba terhubung ke WiFi
   if (ssid.length() > 0 && password.length() > 0)
   {
@@ -232,6 +268,26 @@ void loop()
       Serial.println("Koneksi WiFi Tersambung!");
     }
   }
-  // Serial.println("SSID: " + ssid + ", Password: " + password);
-  // delay(3000);
+  Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
+  delay(3000);
 }
+// void S_resetSettings()
+// {
+//   // Membuat objek WiFiManager
+//   WiFiManager wifiManager;
+
+//   // Memutuskan koneksi Wi-Fi yang aktif
+//   WiFi.disconnect();
+
+//   // Menghapus data SSID dan password dari memori EEPROM
+//   for (int i = 0; i < SSID_LENGTH; i++) {
+//     EEPROM.write(i, 0);
+//   }
+//   for (int i = SSID_LENGTH; i < SSID_LENGTH + PASS_LENGTH; i++) {
+//     EEPROM.write(i, 0);
+//   }
+//   EEPROM.commit();
+
+//   // Menjalankan mode konfigurasi Wi-Fi
+//   wifiManager.startConfigPortal();
+// }
