@@ -91,7 +91,7 @@ void handleNewMessages(int numNewMessages)
 
     String from_name = bot.messages[i].from_name;
 
-    for (int i = 0; i < (count - 1); i++)
+    for (int i = 0; i < (count - 2); i++)
     {
       if (text == controls[i])
       {
@@ -147,7 +147,7 @@ void handleNewMessages(int numNewMessages)
     else if (text == "/status")
     {
       String message = "";
-      for (int i = 0; i < (count - 1); i++)
+      for (int i = 0; i < (count - 2); i++)
       {
         message += controls[i] + " " + String(Statusled[i] ? "ON" : "OFF") + "\n";
       }
@@ -166,6 +166,12 @@ void handleNewMessages(int numNewMessages)
       }
     }
   }
+}
+
+void tombol(){
+    Statusled[0] = !Statusled[0];
+    digitalWrite(Pinled[0], Statusled[0]);
+    delay(100);
 }
 
 void setup()
@@ -247,9 +253,10 @@ void loop()
   // Jika tombol ditekan, LED akan menyala
   if (buttonState == LOW)
   {
-    Statusled[0] = !Statusled[0];
-    digitalWrite(Pinled[0], Statusled[0]);
-    delay(100);
+    tombol();
+    // Statusled[0] = !Statusled[0];
+    // digitalWrite(Pinled[0], Statusled[0]);
+    // delay(100);
   }
 
   if (millis() > lastTimeBotRan + botRequestDelay)
@@ -278,13 +285,7 @@ void loop()
       Serial.println("Koneksi WiFi Tersambung!");
     }
   }
-
-  // else
-  // {
-  //   Statusled[0] = !Statusled[0];
-  //   digitalWrite(Pinled[0], Statusled[0]);
-  // }
-
   // Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
   // delay(3000);
 }
+
