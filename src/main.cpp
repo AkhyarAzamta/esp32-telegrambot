@@ -4,14 +4,14 @@
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 
-const char* ssid = "Hotspot";
-const char* password = "12345678";
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
 // inisialisasi Bot Token
-#define BOTtoken "5516395910:AAELB0hR25UA6KEVACzyaLyLBtBcduG5qjI"  // Bot Token dari BotFather
+#define BOTtoken "YOUR_TELEGRAM_TOKEN"  // Bot Token dari BotFather
 
 // chat id dari @myidbot
-#define CHAT_ID "1994541524"
+#define CHAT_ID "YOUR_CHAT_ID"
 
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
