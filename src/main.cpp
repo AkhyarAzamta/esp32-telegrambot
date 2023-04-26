@@ -11,19 +11,25 @@ String botToken;
 String chatID;
 WiFiClientSecure client;
 UniversalTelegramBot bot(botToken, client);
-
+int reading, cont;
 String ssid;
 String password;
-int botRequestDelay = 100;
+int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
 
 int ON = HIGH, OFF = LOW;
 
-const int BUTTON_PIN = 13;
-int buttonState = 0;
-
+// int buttonState = 0;
+// int buttonState[8];
+// const int PinButton[] = {13, 12, 14, 27, 33, 32, 15, 4};
+const int PinButton[] = {13, 12, 14, 27, 33};
 const int Pinled[] = {2, 4, 5, 18, 19};
-bool Statusled[] = {OFF, OFF, OFF, OFF, OFF};
+int Statusled[5] = {OFF, OFF, OFF, OFF, OFF};
+int buttonState[5] = {LOW, LOW, LOW, LOW, LOW};
+int lastButtonState[5] = {LOW, LOW, LOW, LOW, LOW};
+unsigned long lastDebounceTime[5] = {0, 0, 0, 0, 0};
+const long debounceDelay = 50;
+
 String controls[] = {"/relay1", "/relay2", "/relay3", "/relay4", "/relay5", "/status", "/reset"};
 int count = sizeof(controls) / sizeof(controls[0]);
 
@@ -169,20 +175,46 @@ void handleNewMessages(int numNewMessages)
 }
 
 void tombol(){
-    Statusled[0] = !Statusled[0];
-    digitalWrite(Pinled[0], Statusled[0]);
-    delay(100);
+     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+    // while (numNewMessages)
+    // {
+    //   Serial.println("got response");
+    if (numNewMessages>0)
+    {
+      handleNewMessages(numNewMessages);
+    }
+    
+  //     numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+  //   }
+  //   lastTimeBotRan = millis();
+  // static unsigned long lastCheck = 0;
+  // if (millis() - lastCheck > 5000)
+  // {
+  //   lastCheck = millis();
+  //   if (WiFi.status() != WL_CONNECTED)
+  //   {
+  //     Serial.println("Koneksi WiFi terputussssss!");
+  //     WiFi.begin(ssid.c_str(), password.c_str());
+  //   }
+  //   else
+  //   {
+  //     Serial.println("Koneksi WiFi Tersambung!");
+  //   }
+  // }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  // pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < (count-2); i++)
   {
     pinMode(Pinled[i], OUTPUT);
-    digitalWrite(Pinled[i], Statusled[i]);
+    pinMode(PinButton[i], INPUT);
+    // digitalWrite(Pinled[i], Statusled[i]);
+    // digitalWrite(PinButton[i], Statusled[i]);
   }
 #ifdef ESP32
   client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
@@ -248,43 +280,102 @@ void setup()
 
 void loop()
 {
+  for (int i = 0; i < 5; i++) {
+    reading = digitalRead(PinButton[i]);
+    if (reading == 1)
+    {
+      cont++;
+      delay(300);
+      if (cont == 1)
+      {
+          digitalWrite(Pinled[0], HIGH);
+      }
+      if (cont == 2)
+      {
+          digitalWrite(Pinled[0], LOW);
+          cont=0;
+      }
+      
+    }
+    
+    // if (reading != lastButtonState[i]) {
+    //   Serial.println(reading);
+    //   lastDebounceTime[i] = millis();
+    // }
+    // if ((millis() - lastDebounceTime[i]) > debounceDelay) {
+    //   if (reading != buttonState[i]) {
+    //     buttonState[i] = reading;
+    //     if (buttonState[i] == HIGH) {
+    //       Statusled[i] = !Statusled[i];
+    //       digitalWrite(Pinled[i], Statusled[i]);
+    //     }
+    //   }
+    // }
+    // lastButtonState[i] = reading;
+  }
+        if (millis() > lastTimeBotRan + botRequestDelay)
+  {
+   tombol();
+  }
+
+  // int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+// memproses pesan yang masuk
+
+
+// if (numNewMessages > 0)
+// {
+//   /* code */
+//       handleNewMessages(numNewMessages);
+// }
+
+
+
+  //   Serial.println("numNewMessages : " + numNewMessages);
+  // for (int i=0; i<numNewMessages; i++) {
+  //   String chat_id = String(bot.messages[i].chat_id);
+  //   String text = bot.messages[i].text;
+  //   String from_name = bot.messages[i].from_name;
+
+  //   Serial.println("Chat ID: " + chat_id);
+  //   Serial.println("From: " + from_name);
+  //   Serial.println("Message: " + text);
+
+  //   // membalas pesan yang masuk
+  //   if (text == "/hello") {
+  //     bot.sendMessage(chat_id, "Hello " + from_name);
+  //   } else if (text == "/time") {
+  //     bot.sendMessage(chat_id, "The time is " + String(millis()/1000) + " seconds");
+  //   } else {
+  //     bot.sendMessage(chat_id, "I don't understand");
+  //   }
+  // }
+
+  // memberikan jeda waktu sebelum membaca pesan berikutnya
+  // delay(1000);
+  
+// for (int i = 0; i < 8; i++) {
+//     buttonState[i] = digitalRead(PinButton[i]);
+//   }
+//   for (int i = 0; i < 8; i++) {
+//     if ( buttonState[i] == LOW) {
+//       // Jika tombol telah ditekan dan dilepaskan, ubah status lampu
+//       Statusled[i] = !Statusled[i];
+//       digitalWrite(Pinled[i], Statusled[i]);
+//     }
+//     Statusled[i] = buttonState[i];
+//   }
   // Membaca nilai input dari tombol
- buttonState = digitalRead(BUTTON_PIN);
+//  buttonState = digitalRead(PinButton[7]);
   // Jika tombol ditekan, LED akan menyala
-  if (buttonState == LOW)
-  {
-    tombol();
-    // Statusled[0] = !Statusled[0];
-    // digitalWrite(Pinled[0], Statusled[0]);
-    // delay(100);
-  }
+  // if (buttonState == LOW)
+  // {
+  //   tombol();
+  //   // Statusled[0] = !Statusled[0];
+  //   // digitalWrite(Pinled[0], Statusled[0]);
+  //   // delay(100);
+  // }
 
-  if (millis() > lastTimeBotRan + botRequestDelay)
-  {
-    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
 
-    while (numNewMessages)
-    {
-      Serial.println("got response");
-      handleNewMessages(numNewMessages);
-      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-    }
-    lastTimeBotRan = millis();
-  }
-  static unsigned long lastCheck = 0;
-  if (millis() - lastCheck > 5000)
-  {
-    lastCheck = millis();
-    if (WiFi.status() != WL_CONNECTED)
-    {
-      Serial.println("Koneksi WiFi terputussssss!");
-      WiFi.begin(ssid.c_str(), password.c_str());
-    }
-    else
-    {
-      Serial.println("Koneksi WiFi Tersambung!");
-    }
-  }
   // Serial.println("BotToken: " + botToken + ", chatID: " + chatID);
   // delay(3000);
 }
